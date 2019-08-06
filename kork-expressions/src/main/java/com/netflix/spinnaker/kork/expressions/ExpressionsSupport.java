@@ -37,8 +37,8 @@ public class ExpressionsSupport {
   private final Set<Class<?>> allowedReturnTypes;
   private final List<ExpressionFunctionProvider> expressionFunctionProviders;
 
-  public ExpressionsSupport(Class<?> extraAllowedReturnType) {
-    this(new Class[] {extraAllowedReturnType}, null);
+  ExpressionsSupport(Class<?>... extraAllowedReturnTypes) {
+    this(extraAllowedReturnTypes, null);
   }
 
   public ExpressionsSupport(

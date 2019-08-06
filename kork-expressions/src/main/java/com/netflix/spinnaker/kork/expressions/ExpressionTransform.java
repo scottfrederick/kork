@@ -27,6 +27,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.PropertySourcesPropertyResolver;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
@@ -38,18 +40,26 @@ public class ExpressionTransform {
 
   private final ParserContext parserContext;
   private final ExpressionParser parser;
+  private final PropertySourcesPropertyResolver propertyResolver;
   private final Function<String, String> stringExpressionPreprocessor;
   private final Collection<Class<?>> typesToStringify;
 
   public ExpressionTransform(
       ParserContext parserContext,
       ExpressionParser parser,
+      ConfigurableEnvironment environment,
       Function<String, String> stringExpressionPreprocessor,
       Class<?>... typesToStringify) {
     this.parserContext = parserContext;
     this.parser = parser;
     this.stringExpressionPreprocessor = stringExpressionPreprocessor;
     this.typesToStringify = Arrays.asList(typesToStringify);
+
+    if (environment == null) {
+      this.propertyResolver = null;
+    } else {
+      this.propertyResolver = new PropertySourcesPropertyResolver(environment.getPropertySources());
+    }
   }
 
   private static Stream<?> flatten(Object o) {
@@ -146,6 +156,9 @@ public class ExpressionTransform {
       ExpressionEvaluationSummary summary,
       Map<String, Object> additionalContext) {
     boolean hasUnresolvedExpressions = false;
+
+    source = resolvePropertyPlaceholders(source);
+
     if (isExpression(source)) {
       String preprocessed = stringExpressionPreprocessor.apply(source.toString());
       Object result = null;
@@ -221,6 +234,13 @@ public class ExpressionTransform {
       return result;
     }
 
+    return source;
+  }
+
+  private Object resolvePropertyPlaceholders(Object source) {
+    if (propertyResolver != null && source instanceof String) {
+      return propertyResolver.resolvePlaceholders(source.toString());
+    }
     return source;
   }
 
